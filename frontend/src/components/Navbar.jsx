@@ -26,6 +26,12 @@ const Navbar = () => {
           >
             Saved Quizzes
           </Link>
+          <Link 
+            to="/multiplayer" 
+            className="text-gray-600 hover:text-primary-600 font-medium transition-colors duration-200"
+          >
+            Multiplayer
+          </Link>
         </div>
       </div>
     </nav>

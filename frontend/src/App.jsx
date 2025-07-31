@@ -4,6 +4,9 @@ import Home from './pages/Home';
 import Quiz from './pages/Quiz';
 import SavedQuizzes from './pages/SavedQuizzes';
 import Navbar from './components/Navbar';
+import MultiplayerLanding from './pages/MultiplayerLanding';
+import WaitingRoom from './pages/WaitingRoom';
+import MultiplayerQuiz from './pages/MultiplayerQuiz';
 
 function App() {
   return (
@@ -18,6 +21,9 @@ function App() {
                 {/* <Route path="/" element={<random_page />} /> */}
                 <Route path="/quiz" element={<Quiz />} />
                 <Route path="/saved-quizzes" element={<SavedQuizzes />} />
+                <Route path="/multiplayer" element={<MultiplayerLanding />} />
+                <Route path="/room/:roomId" element={<WaitingRoom />} />
+                <Route path="/multiplayer-quiz/:roomId" element={<MultiplayerQuiz />} />
               </Routes>
         </main>
       </div>

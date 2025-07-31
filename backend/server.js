@@ -8,6 +8,8 @@ import { fileURLToPath } from 'url';
 import { promisify } from 'util';
 import { exec } from 'child_process';
 import { writeFile, readFile, unlink } from 'fs/promises';
+import http from 'http';
+import { Server } from 'socket.io';
 
 const execAsync = promisify(exec);
 
@@ -34,7 +36,13 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 // Initialize Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+// async function listModels() {
+//     const models = await genAI.listModels();
+//     console.log(models);
+// }
+// listModels();
+
+const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
 // Enable CORS for all routes
 app.use(cors());
@@ -129,7 +137,90 @@ app.post('/api/generate-quiz', upload.single('pdf'), async (req, res) => {
   }
 });
 
+// --- SOCKET.IO MULTIPLAYER LOGIC ---
+const server = http.createServer(app);
+const io = new Server(server, { cors: { origin: '*' } });
+
+const rooms = {}; // { roomId: { quizData, users: [{id, name, score, finished, answers}], started } }
+
+function generateRoomId() {
+  return Math.random().toString(36).substr(2, 8).toUpperCase();
+}
+
+io.on('connection', (socket) => {
+  socket.on('create-room', ({ quizData }) => {
+    const roomId = generateRoomId();
+    rooms[roomId] = { quizData, users: [], started: false };
+    socket.join(roomId);
+    rooms[roomId].users.push({ id: socket.id, name: 'Host', score: 0, finished: false, answers: [] });
+    socket.emit('room-created', { roomId });
+  });
+
+  socket.on('join-room', ({ roomId, username }) => {
+    if (!rooms[roomId]) {
+      socket.emit('error', { message: 'Room not found.' });
+      return;
+    }
+    socket.join(roomId);
+    const name = username || `User-${socket.id.slice(-4)}`;
+    rooms[roomId].users.push({ id: socket.id, name, score: 0, finished: false, answers: [] });
+    io.to(roomId).emit('user-joined', { users: rooms[roomId].users.map(u => u.name) });
+    socket.emit('user-joined', { roomId, quizData: rooms[roomId].quizData });
+  });
+
+  socket.on('get-user-list', ({ roomId }) => {
+    if (rooms[roomId]) {
+      socket.emit('user-list', { users: rooms[roomId].users.map(u => u.name) });
+    }
+  });
+
+  socket.on('start-quiz', ({ roomId, quizData }) => {
+    if (rooms[roomId]) {
+      rooms[roomId].started = true;
+      io.to(roomId).emit('quiz-start', { quizData });
+    }
+  });
+
+  socket.on('submit-answer', ({ roomId, questionIndex, answer }) => {
+    const room = rooms[roomId];
+    if (!room) return;
+    const user = room.users.find(u => u.id === socket.id);
+    if (!user) return;
+    user.answers[questionIndex] = answer;
+    // Only update score if this is the last question
+    if (questionIndex === room.quizData.questions.length - 1) {
+      // Calculate score
+      let score = 0;
+      room.quizData.questions.forEach((q, idx) => {
+        if (user.answers[idx] === q.correctAnswer) score++;
+      });
+      user.score = score;
+      user.finished = true;
+      // Emit individual result to user
+      socket.emit('quiz-result', { score, total: room.quizData.questions.length });
+    }
+    // Emit updated leaderboard to all
+    io.to(roomId).emit('user-score', {
+      leaderboard: room.users.map(u => ({ name: u.name, score: u.score, finished: u.finished }))
+    });
+  });
+
+  socket.on('disconnect', () => {
+    for (const roomId in rooms) {
+      const idx = rooms[roomId].users.findIndex(u => u.id === socket.id);
+      if (idx !== -1) {
+        rooms[roomId].users.splice(idx, 1);
+        io.to(roomId).emit('user-list', { users: rooms[roomId].users.map(u => u.name) });
+        if (rooms[roomId].users.length === 0) {
+          delete rooms[roomId];
+        }
+        break;
+      }
+    }
+  });
+});
+
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 }); 

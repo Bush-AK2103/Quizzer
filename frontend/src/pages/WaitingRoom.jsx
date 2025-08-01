@@ -14,12 +14,21 @@ const WaitingRoom = () => {
   const [copied, setCopied] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
 
+  // SVG for the Copy icon
+  const copyIcon = (
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-copy">
+      <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+    </svg>
+  );
+
   useEffect(() => {
-    // Join room if not already joined
-    if (!isHost) {
+    // Join room only if not host and a username is provided
+    if (!isHost && username) {
       socket.emit('join-room', { roomId, username });
     }
-    // Listen for user list updates
+    
+    // Set up listeners for socket events
     socket.on('user-joined', ({ users }) => {
       setUsers(users);
     });
@@ -33,15 +42,18 @@ const WaitingRoom = () => {
     socket.on('error', ({ message }) => {
       setError(message || 'An error occurred.');
     });
-    // Request user list
+
+    // Request user list on component mount
     socket.emit('get-user-list', { roomId });
+
+    // Clean up listeners on component unmount
     return () => {
       socket.off('user-joined');
       socket.off('user-list');
       socket.off('quiz-start');
       socket.off('error');
     };
-  }, [roomId, isHost, navigate, username]);
+  }, [roomId, isHost, navigate, username]); // Dependency array to re-run on changes
 
   const handleStartQuiz = () => {
     if (isHost) {
@@ -49,48 +61,98 @@ const WaitingRoom = () => {
     }
   };
 
-  const handleCopyCode = () => {
-    navigator.clipboard.writeText(roomId);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+  const copyTextToClipboard = (text) => {
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed'; 
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      return true;
+    } catch (err) {
+      console.error('Failed to copy text', err);
+      return false;
+    }
   };
+
+  const handleCopyCode = () => {
+    if (copyTextToClipboard(roomId)) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } else {
+      alert('Failed to copy code. Please copy manually.'); 
+    }
+  };
+
   const handleCopyLink = () => {
-    navigator.clipboard.writeText(`${window.location.origin}/room/${roomId}`);
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 1500);
+    const link = `${window.location.origin}/room/${roomId}`;
+    if (copyTextToClipboard(link)) {
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 1500);
+    } else {
+      alert('Failed to copy link. Please copy manually.');
+    }
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
-      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-        <h1 className="text-2xl font-bold mb-4 text-center">Waiting Room</h1>
-        <div className="mb-4 text-center">
-          <span className="font-semibold">Room Code:</span>
-          <span className="text-lg font-mono ml-2 bg-gray-100 px-3 py-1 rounded">{roomId}</span>
-          <button onClick={handleCopyCode} className="btn btn-secondary ml-2 px-2 py-1 text-sm">{copied ? 'Copied!' : 'Copy Code'}</button>
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-black text-white">
+      <div className="w-full max-w-2xl mx-auto text-center space-y-8 bg-gray-800 p-8 rounded-2xl shadow-xl hover:shadow-[#00a9a5]/50 transition-shadow duration-300">
+        <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-[#00a9a5] drop-shadow-lg">
+          Waiting Room
+        </h1>
+        <p className="text-xl md:text-2xl font-light text-gray-300">
+          Waiting for the host to start the quiz...
+        </p>
+        <div className="bg-gray-700 p-4 rounded-xl flex flex-col space-y-4">
+          <div className="flex flex-col items-center justify-center space-y-2 sm:flex-row sm:justify-between sm:space-y-0 sm:space-x-4">
+            <span className="font-semibold text-gray-400">Room Code:</span>
+            <span className="text-lg font-mono bg-gray-600 px-4 py-2 rounded-full text-white">{roomId}</span>
+            <button onClick={handleCopyCode} className="btn bg-[#00a9a5] text-white px-4 py-2 rounded-full text-sm hover:bg-[#007a77] transition-colors duration-300 flex items-center space-x-2">
+              {copyIcon}
+              <span>{copied ? 'Copied!' : 'Copy Code'}</span>
+            </button>
+          </div>
+          <div className="flex flex-col items-center justify-center space-y-2 sm:flex-row sm:justify-between sm:space-y-0 sm:space-x-4">
+            <span className="font-semibold text-gray-400">Invite Link:</span>
+            {/* Added a responsive break to prevent overflow on smaller screens */}
+            <span className="text-sm text-gray-400 break-all">{`${window.location.origin}/room/${roomId}`}</span>
+            <button onClick={handleCopyLink} className="btn bg-[#00a9a5] text-white px-4 py-2 rounded-full text-sm hover:bg-[#007a77] transition-colors duration-300 flex items-center space-x-2">
+              {copyIcon}
+              <span>{copiedLink ? 'Copied!' : 'Copy Link'}</span>
+            </button>
+          </div>
         </div>
-        <div className="mb-2 text-center">
-          <span className="text-sm text-gray-600">{`${window.location.origin}/room/${roomId}`}</span>
-          <button onClick={handleCopyLink} className="btn btn-secondary ml-2 px-2 py-1 text-sm">{copiedLink ? 'Copied!' : 'Copy Link'}</button>
-        </div>
+        
         {username && (
-          <div className="mb-2 text-center text-blue-600">You joined as: <span className="font-semibold">{username}</span></div>
+          <div className="p-4 bg-[#00a9a5]/20 text-[#00a9a5] rounded-xl font-semibold">
+            You have joined as: {username}
+          </div>
         )}
-        <div className="mb-4">
-          <h2 className="font-semibold mb-2">Players:</h2>
-          <ul className="list-disc pl-6">
+
+        <div className="w-full text-left">
+          <h2 className="text-2xl font-bold mb-4 text-gray-200">Players ({users.length}):</h2>
+          <ul className="space-y-2">
             {users.map((user, idx) => (
-              <li key={idx}>{user}</li>
+              <li key={idx} className="bg-gray-700 p-3 rounded-lg text-lg text-gray-300 font-medium">
+                {user}
+              </li>
             ))}
           </ul>
         </div>
+        
         {isHost && (
-          <button onClick={handleStartQuiz} className="btn btn-primary w-full mb-2">Start Quiz</button>
+          <button onClick={handleStartQuiz} className="w-full btn bg-[#00a9a5] text-white font-bold py-3 px-8 rounded-full shadow-lg hover:bg-[#007a77] transition-colors duration-300">
+            Start Quiz
+          </button>
         )}
-        {error && <div className="text-red-500 text-center">{error}</div>}
+        
+        {error && <div className="text-red-500 text-center mt-4">{error}</div>}
       </div>
     </div>
   );
 };
 
-export default WaitingRoom; 
+export default WaitingRoom;

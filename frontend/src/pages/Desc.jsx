@@ -39,7 +39,7 @@ const Home = () => {
   );
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-black text-white">
+    <div className="min-h-screen flex flex-col  bg-black text-white">
       {/* Main container for the home page content */}
       <div className="max-w-4xl mx-auto text-center space-y-12">
         {/* Main heading of the app */}

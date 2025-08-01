@@ -12,9 +12,9 @@ import Desc from './pages/Desc';
 function App() {
   return (
     <Router>
-      <div className="min-h-screen bg-black flex flex-col items-center justify-center w-screen ">
+      <div className="min-h-screen bg-black flex flex-col  w-screen ">
         <Navbar />
-        <main className="flex-1 w-full flex items-center justify-center px-6 py-8">
+        <main className="flex-1 w-screen flex items-center justify-center ">
             {/* <div className="bg-white rounded-lg shadow-sm p-6">
             </div> */}
               <Routes>

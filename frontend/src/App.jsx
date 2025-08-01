@@ -7,6 +7,7 @@ import Navbar from './components/Navbar';
 import MultiplayerLanding from './pages/MultiplayerLanding';
 import WaitingRoom from './pages/WaitingRoom';
 import MultiplayerQuiz from './pages/MultiplayerQuiz';
+import Desc from './pages/Desc';
 
 function App() {
   return (
@@ -17,7 +18,8 @@ function App() {
             {/* <div className="bg-white rounded-lg shadow-sm p-6">
             </div> */}
               <Routes>
-                <Route path="/" element={<Home />} />
+                <Route path="/" element={<Desc />} />
+                <Route path="/home" element={<Home />} />
                 {/* <Route path="/" element={<random_page />} /> */}
                 <Route path="/quiz" element={<Quiz />} />
                 <Route path="/saved-quizzes" element={<SavedQuizzes />} />

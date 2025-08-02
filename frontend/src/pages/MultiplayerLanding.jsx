@@ -81,33 +81,46 @@ const MultiplayerLanding = () => {
   };
 
   // Join as participant
-  const handleJoinRoom = (e) => {
-    e.preventDefault();
-    if (!joinCode.trim()) {
-      setError('Please enter a room code');
-      return;
-    }
-    if (!username.trim()) {
-      setError('Please enter your name');
-      return;
-    }
-    setLoading(true);
-    setError('');
-    socket.emit('join-room', { roomId: joinCode.trim(), username: username.trim() });
-    socket.once('user-joined', ({ roomId, quizData }) => {
-      // Added check to ensure roomId and quizData are valid before navigating
-      if (roomId && quizData) {
-        navigate(`/room/${roomId}`, { state: { isHost: false, quizData, username: username.trim() } });
-      } else {
-        setError('Failed to join room. Invalid room data.');
-        setLoading(false);
-      }
-    });
-    socket.once('error', ({ message }) => {
-      setError(message || 'Failed to join room.');
-      setLoading(false);
-    });
-  };
+const handleJoinRoom = (e) => {
+  e.preventDefault();
+
+  // ✅ Guard: prevent empty input or multiple submits
+  if (!joinCode.trim() || !username.trim()) return;
+  if (loading) return;
+
+  setLoading(true);
+
+  const timeoutId = setTimeout(() => {
+    setLoading(false);
+    setError('Failed to join room. Please try again.');
+  }, 5000);
+
+  socket.emit('join-room', {
+    roomId: joinCode.trim(),
+    username: username.trim()
+  });
+
+  console.log('Emitting join-room with:', {
+    roomId: joinCode.trim(),
+    username: username.trim()
+  });
+
+  socket.off('user-joined');
+  socket.off('error');
+
+  socket.on('user-joined', ({ roomId }) => {
+    clearTimeout(timeoutId);
+    setLoading(false);
+    navigate(`/room/${roomId}`, { state: { username } });
+  });
+
+  socket.on('error', (errorMessage) => {
+    clearTimeout(timeoutId);
+    setLoading(false);
+    setError(errorMessage);
+  });
+};
+
 
   // Copy helpers
   const copyTextToClipboard = (text) => {

@@ -13,7 +13,7 @@ function App() {
   return (
     <Router>
       <div className="min-h-screen bg-black flex flex-col  w-screen ">
-        <Navbar />
+        {/* <Navbar />ss */}
         <main className="flex-1 w-screen flex items-center justify-center ">
             {/* <div className="bg-white rounded-lg shadow-sm p-6">
             </div> */}

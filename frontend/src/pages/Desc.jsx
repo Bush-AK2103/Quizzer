@@ -9,7 +9,6 @@ const Home = () => {
 
   // Handle the click event for the "Explore" button
   const handleExploreClick = () => {
-    console.log("Explore button clicked! Navigating to /quiz...");
     // Navigate to the quiz page or another main page of the application
     navigate('/home');
   };
@@ -39,7 +38,7 @@ const Home = () => {
   );
 
   return (
-    <div className="min-h-screen flex flex-col  bg-black text-white">
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-black text-white">
       {/* Main container for the home page content */}
       <div className="max-w-4xl mx-auto text-center space-y-12">
         {/* Main heading of the app */}
@@ -51,11 +50,17 @@ const Home = () => {
             Create, Share, and Master Quizzes from Your PDFs
           </p>
         </div>
-
+        {/* Call to action button */}
+        <button
+          onClick={handleExploreClick}
+          className="bg-[#00a9a5] text-white font-bold py-3 px-8 rounded-full shadow-lg hover:bg-[#007a77] transition-colors duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-[#00a9a5]/50"
+        >
+          Create Your Quiz
+        </button>
         {/* Section describing the core features */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Feature Card 1: Instant Quizzes */}
-          <div className="bg-gray-800 p-8 rounded-2xl shadow-xl hover:shadow-[#00a9a5]/50 transition-shadow duration-300 ease-in-out transform hover:scale-105">
+          <div onClick={() => navigate('/quiz')} className="bg-gray-800 p-8 rounded-2xl shadow-xl hover:shadow-[#00a9a5]/50 transition-shadow duration-300 ease-in-out transform hover:scale-105 cursor-pointer">
             <div className="flex justify-center mb-4 text-[#00a9a5]">
               {bookOpenIcon}
             </div>
@@ -66,7 +71,7 @@ const Home = () => {
           </div>
 
           {/* Feature Card 2: Multiplayer Fun */}
-          <div className="bg-gray-800 p-8 rounded-2xl shadow-xl hover:shadow-[#00a9a5]/50 transition-shadow duration-300 ease-in-out transform hover:scale-105">
+          <div onClick={() => navigate('/multiplayer')} className="bg-gray-800 p-8 rounded-2xl shadow-xl hover:shadow-[#00a9a5]/50 transition-shadow duration-300 ease-in-out transform hover:scale-105 cursor-pointer">
             <div className="flex justify-center mb-4 text-[#00a9a5]">
               {usersIcon}
             </div>
@@ -77,7 +82,7 @@ const Home = () => {
           </div>
 
           {/* Feature Card 3: Performance Tracking */}
-          <div className="bg-gray-800 p-8 rounded-2xl shadow-xl hover:shadow-[#00a9a5]/50 transition-shadow duration-300 ease-in-out transform hover:scale-105">
+          <div onClick={() => navigate('/saved-quizzes')} className="bg-gray-800 p-8 rounded-2xl shadow-xl hover:shadow-[#00a9a5]/50 transition-shadow duration-300 ease-in-out transform hover:scale-105 cursor-pointer">
             <div className="flex justify-center mb-4 text-[#00a9a5]">
               {lightbulbIcon}
             </div>
@@ -89,16 +94,10 @@ const Home = () => {
         </div>
 
         {/* Call to action button */}
-        <button
-          onClick={handleExploreClick}
-          className="bg-[#00a9a5] text-white font-bold py-3 px-8 rounded-full shadow-lg hover:bg-[#007a77] transition-colors duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-[#00a9a5]/50"
-        >
-          Explore Quizzer
-        </button>
+        
       </div>
     </div>
   );
 };
 
 export default Home;
-

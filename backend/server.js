@@ -140,9 +140,10 @@ app.post('/api/generate-quiz', upload.single('pdf'), async (req, res) => {
   }
 });
 
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'frontend', 'dist', 'index.html'));
+app.get("/", (req, res) => {
+  res.send("Quizzer Backend is running ✅");
 });
+
 
 // --- SOCKET.IO MULTIPLAYER LOGIC ---
 const server = http.createServer(app);

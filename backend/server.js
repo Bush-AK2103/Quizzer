@@ -166,7 +166,7 @@ io.on('connection', (socket) => {
     socket.emit('room-created', { roomId });
   });
 
-  socket.on('join-room', ({ roomId, username }) => {
+  socket.once('join-room', ({ roomId, username }) => {
     console.log('Join room request:', { roomId, username });
     
     if (!rooms[roomId]) {

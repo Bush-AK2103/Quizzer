@@ -60,7 +60,7 @@ const Home = () => {
         {/* Section describing the core features */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Feature Card 1: Instant Quizzes */}
-          <div onClick={() => navigate('/quiz')} className="bg-gray-800 p-8 rounded-2xl shadow-xl hover:shadow-[#00a9a5]/50 transition-shadow duration-300 ease-in-out transform hover:scale-105 cursor-pointer">
+          <div onClick={() => navigate('/home')} className="bg-gray-800 p-8 rounded-2xl shadow-xl hover:shadow-[#00a9a5]/50 transition-shadow duration-300 ease-in-out transform hover:scale-105 cursor-pointer">
             <div className="flex justify-center mb-4 text-[#00a9a5]">
               {bookOpenIcon}
             </div>

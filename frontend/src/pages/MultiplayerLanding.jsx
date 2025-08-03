@@ -48,10 +48,12 @@ const MultiplayerLanding = () => {
     formData.append('level', level);
     formData.append('numQuestions', numQuestions);
     try {
-      await axios.get('http://localhost:3001/api/health');
-      const response = await axios.post('http://localhost:3001/api/generate-quiz', formData, {
+      const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+      await axios.get(`${BASE_URL}/api/health`);
+      const response = await axios.post(`${BASE_URL}/api/generate-quiz`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
+
       const quizData = response.data;
       // Emit create-room with quizData
       socket.emit('create-room', { quizData });
@@ -83,6 +85,8 @@ const MultiplayerLanding = () => {
   // Join as participant
 const handleJoinRoom = (e) => {
   e.preventDefault();
+  const roomId = joinCode.trim();
+  const userName = username.trim();
 
   // ✅ Guard: prevent empty input or multiple submits
   if (!joinCode.trim() || !username.trim()) return;
@@ -99,7 +103,7 @@ const handleJoinRoom = (e) => {
     roomId: joinCode.trim(),
     username: username.trim()
   });
-
+  navigate(`/room/${roomId}`, { state: { username: userName } });
   console.log('Emitting join-room with:', {
     roomId: joinCode.trim(),
     username: username.trim()
@@ -108,11 +112,11 @@ const handleJoinRoom = (e) => {
   socket.off('user-joined');
   socket.off('error');
 
-  socket.on('user-joined', ({ roomId }) => {
-    clearTimeout(timeoutId);
-    setLoading(false);
-    navigate(`/room/${roomId}`, { state: { username } });
-  });
+  // socket.on('user-joined', ({ roomId }) => {
+  //   clearTimeout(timeoutId);
+  //   setLoading(false);
+  //   navigate(`/room/${roomId}`, { state: { username } });
+  // });
 
   socket.on('error', (errorMessage) => {
     clearTimeout(timeoutId);

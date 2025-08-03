@@ -37,9 +37,11 @@ const Home = () => {
     formData.append('numQuestions', numQuestions);
 
     try {
-      await axios.get('http://localhost:3001/api/health');
+      const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
-      const response = await axios.post('http://localhost:3001/api/generate-quiz', formData, {
+      await axios.get(`${BASE_URL}/api/health`);
+
+      const response = await axios.post(`${BASE_URL}/api/generate-quiz`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 

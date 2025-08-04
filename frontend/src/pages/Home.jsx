@@ -53,7 +53,7 @@ const Home = () => {
       if (err.response) {
         setError(err.response.data.error || 'Failed to generate quiz. Please try again.');
       } else if (err.request) {
-        setError('Could not connect to the server. Please make sure the backend is running.');
+        setError('Could not connect to the server. Please check your internet connection.');
       } else {
         setError('An unexpected error occurred. Please try again.');
       }

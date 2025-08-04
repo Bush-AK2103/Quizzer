@@ -2,14 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const Home = () => {
-  // NOTE: This error "useNavigate() may be used only in the context of a <Router> component"
-  // is expected in this isolated preview environment. When you integrate this file
-  // into your App.jsx, which wraps the components in a <Router>, this error will disappear.
   const navigate = useNavigate();
-
-  // Handle the click event for the "Explore" button
   const handleExploreClick = () => {
-    // Navigate to the quiz page or another main page of the application
     navigate('/home');
   };
 
@@ -39,7 +33,7 @@ const Home = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-black text-white">
-      {/* Main container for the home page content */}
+      {/* Main container for the desc page content */}
       <div className="max-w-4xl mx-auto text-center space-y-12">
         {/* Main heading of the app */}
         <div className="space-y-4">

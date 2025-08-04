@@ -104,10 +104,10 @@ const handleJoinRoom = (e) => {
     username: username.trim()
   });
   navigate(`/room/${roomId}`, { state: { username: userName } });
-  console.log('Emitting join-room with:', {
-    roomId: joinCode.trim(),
-    username: username.trim()
-  });
+  // console.log('Emitting join-room with:', {
+  //   roomId: joinCode.trim(),
+  //   username: username.trim()
+  // });
 
   socket.off('user-joined');
   socket.off('error');
@@ -220,7 +220,7 @@ const handleJoinRoom = (e) => {
         {step === 'create' && showShare && (
           <div className="mt-6 flex flex-col items-center text-center space-y-4">
             <h2 className="text-2xl font-bold text-gray-200">Room Created!</h2>
-            <div className="text-yellow-400 text-sm font-medium p-3 bg-yellow-900 rounded-lg">⚠️ Do not refresh or close the backend server, or the room will be lost. If all users leave, the room will be deleted.</div>
+            <div className="text-yellow-400 text-sm font-medium p-3 bg-yellow-900 rounded-lg">⚠️ Do not refresh, or the room will be lost. If all users leave, the room will be deleted.</div>
             <p className="text-gray-300">Share this code or link with friends:</p>
             <div className="flex items-center space-x-2 bg-gray-700 p-3 rounded-full w-full max-w-sm mx-auto">
               <span className="font-mono text-lg text-white flex-1 truncate">{roomCode}</span>

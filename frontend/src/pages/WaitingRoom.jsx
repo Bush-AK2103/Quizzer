@@ -44,12 +44,10 @@ const WaitingRoom = () => {
     });
     
     socket.on('user-list', ({ users }) => {
-      console.log('User list received:', users);
       setUsers(users);
     });
     
     socket.on('quiz-start', ({ quizData }) => {
-      console.log('Quiz starting with data:', quizData);
       localStorage.setItem(`mp_quizData_${roomId}`, JSON.stringify(quizData));
       navigate(`/multiplayer-quiz/${roomId}`, { state: { quizData, isHost, username } });
     });

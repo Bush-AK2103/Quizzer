@@ -140,6 +140,56 @@ app.post('/api/generate-quiz', upload.single('pdf'), async (req, res) => {
   }
 });
 
+//prompt based quiz generation endpoint
+app.post('/api/generate-quiz-from-prompt', async (req, res) => {
+  try {
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(500).json({ error: 'GEMINI_API_KEY is not configured. Please set it in the .env file.' });
+    }
+
+    const { promptText, level, numQuestions } = req.body;
+
+    if (!promptText || !level || !numQuestions) {
+      return res.status(400).json({ error: 'Missing required fields: promptText, level, or numQuestions' });
+    }
+
+    const prompt = `Create ${numQuestions} ${level} difficulty multiple choice questions based on the following prompt. 
+    For each question, provide 4 options and indicate the correct answer. Format the response as JSON:
+    {
+      "questions": [
+        {
+          "question": "question text",
+          "options": ["option1", "option2", "option3", "option4"],
+          "correctAnswer": 0
+        }
+      ]
+    }
+
+    Prompt: ${promptText}`;
+
+    console.log('Sending prompt-based request to Gemini...');
+    const result = await model.generateContent({
+      contents: [{ role: "user", parts: [{ text: prompt }] }]
+    });
+
+    const response = await result.response;
+    const responseText = response.text();
+    console.log('Raw response (prompt):', responseText);
+
+    const cleanedJson = cleanJsonString(responseText);
+    console.log('Cleaned JSON (prompt):', cleanedJson);
+    const quizData = JSON.parse(cleanedJson);
+
+    res.json(quizData);
+  } catch (error) {
+    console.error('Prompt-based quiz generation error:', error);
+    res.status(500).json({
+      error: 'Failed to generate quiz from prompt',
+      details: error.message
+    });
+  }
+});
+
 app.get("/", (req, res) => {
   res.send("Quizzer Backend is running ✅");
 });

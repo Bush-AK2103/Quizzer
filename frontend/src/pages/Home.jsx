@@ -5,7 +5,9 @@ import CubeScene from './CubeScene';
 
 const Home = () => {
   const navigate = useNavigate();
+  const [mode, setMode] = useState('pdf'); // 'pdf' or 'prompt'
   const [file, setFile] = useState(null);
+  const [promptText, setPromptText] = useState('');
   const [level, setLevel] = useState('medium');
   const [numQuestions, setNumQuestions] = useState(5);
   const [loading, setLoading] = useState(false);
@@ -23,27 +25,42 @@ const Home = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!file) {
+
+    if (mode === 'pdf' && !file) {
       setError('Please upload a PDF file');
+      return;
+    }
+
+    if (mode === 'prompt' && !promptText.trim()) {
+      setError('Please enter some prompt text');
       return;
     }
 
     setLoading(true);
     setError('');
 
-    const formData = new FormData();
-    formData.append('pdf', file);
-    formData.append('level', level);
-    formData.append('numQuestions', numQuestions);
-
     try {
-      const BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
-
+      const BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
       await axios.get(`${BASE_URL}/api/health`);
 
-      const response = await axios.post(`${BASE_URL}/api/generate-quiz`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      let response;
+
+      if (mode === 'pdf') {
+        const formData = new FormData();
+        formData.append('pdf', file);
+        formData.append('level', level);
+        formData.append('numQuestions', numQuestions);
+
+        response = await axios.post(`${BASE_URL}/api/generate-quiz`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+      } else {
+        response = await axios.post(`${BASE_URL}/api/generate-quiz-from-prompt`, {
+          promptText,
+          level,
+          numQuestions,
+        });
+      }
 
       const data = response.data;
       localStorage.setItem('quizData', JSON.stringify(data));
@@ -87,24 +104,58 @@ const Home = () => {
 
   return (
     <div className="w-full max-h-screen flex flex-col items-center justify-center">
-      {/* 3D Cube Dropzone */}
-      <div className="w-full h-[300px] rounded-lg overflow-hidden">
-        <CubeScene onFileSelect={handleFileSelect} loading={loading} />
+      {/* Mode Switch */}
+      <div className="flex space-x-4 mb-4">
+        <button
+          onClick={() => setMode('pdf')}
+          className={`px-4 py-2 rounded-full font-semibold shadow ${
+            mode === 'pdf' ? 'bg-[#00a9a5] text-white' : 'bg-gray-300 text-gray-800'
+          }`}
+        >
+          Upload PDF
+        </button>
+        <button
+          onClick={() => setMode('prompt')}
+          className={`px-4 py-2 rounded-full font-semibold shadow ${
+            mode === 'prompt' ? 'bg-[#00a9a5] text-white' : 'bg-gray-300 text-gray-800'
+          }`}
+        >
+          Enter Prompt
+        </button>
       </div>
 
-      <div className="text-center mt-2">
-        {file ? (
-          <p className="text-sm text-gray-600 font-medium">
-            Uploaded File: <span className="text-gray-800">{file.name}</span>
-          </p>
-        ) : (
-          <p className="text-sm text-gray-500">No file uploaded yet.</p>
-        )}
-      </div>
+      {/* Input Section */}
+      {mode === 'pdf' ? (
+        <>
+          <div className="w-full h-[300px] rounded-lg overflow-hidden">
+            <CubeScene onFileSelect={handleFileSelect} loading={loading} />
+          </div>
+          <div className="text-center mt-2">
+            {file ? (
+              <p className="text-sm text-gray-600 font-medium">
+                Uploaded File: <span className="text-gray-800">{file.name}</span>
+              </p>
+            ) : (
+              <p className="text-sm text-gray-500">No file uploaded yet.</p>
+            )}
+          </div>
+        </>
+      ) : (
+        <div className="w-full max-w-md mb-4">
+          <textarea
+            rows={6}
+            value={promptText}
+            onChange={(e) => setPromptText(e.target.value)}
+            placeholder="Type your custom prompt or text..."
+            className="w-full p-4 rounded-lg border border-gray-300 text-sm focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+      )}
 
+      {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-6 w-full max-w-md">
-        <div className='flex flex-row px-12 py-12'>
-          <div className='flex flex-col'>
+        <div className="flex flex-row px-12 py-12">
+          <div className="flex flex-col">
             <label className="block text-sm font-medium text-gray-700 mb-1 px-2">Level</label>
             <select value={level} onChange={(e) => setLevel(e.target.value)} className="input-field pr-10">
               <option value="easy">Easy</option>
@@ -112,7 +163,7 @@ const Home = () => {
               <option value="hard">Hard</option>
             </select>
           </div>
-          <div className='flex flex-col px-10'>
+          <div className="flex flex-col px-10">
             <label className="block text-sm font-medium text-gray-700 mb-1 px-2">Number of Questions</label>
             <input
               type="number"
@@ -129,7 +180,7 @@ const Home = () => {
 
         <button
           type="submit"
-          disabled={loading || !file || quizGenerated}
+          disabled={loading || (mode === 'pdf' && !file) || (mode === 'prompt' && !promptText.trim()) || quizGenerated}
           className={`btn btn-primary w-full ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           {loading ? 'Generating Quiz...' : 'Create Quiz'}
@@ -147,7 +198,7 @@ const Home = () => {
             <button
               type="button"
               onClick={handleSaveQuiz}
-              className="btn btn-primary w-full bg-blue-600 hover:bg-blue-700"
+              className="btn btn-primary w-full bg-[#00a9a5] hover:bg-blue-700"
             >
               Save Quiz
             </button>

@@ -5,8 +5,10 @@ import socket from '../socket';
 
 const MultiplayerLanding = () => {
   const navigate = useNavigate();
-  const [step, setStep] = useState(null); // 'create' or 'join'
+  const [step, setStep] = useState(null);
   const [file, setFile] = useState(null);
+  const [promptText, setPromptText] = useState('');
+  const [mode, setMode] = useState('pdf'); // 'pdf' or 'prompt'
   const [level, setLevel] = useState('medium');
   const [numQuestions, setNumQuestions] = useState(5);
   const [loading, setLoading] = useState(false);
@@ -16,7 +18,6 @@ const MultiplayerLanding = () => {
   const [username, setUsername] = useState('');
   const [showShare, setShowShare] = useState(false);
 
-  // SVG for the Add icon
   const addIcon = (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus-circle">
       <circle cx="12" cy="12" r="10" />
@@ -25,7 +26,6 @@ const MultiplayerLanding = () => {
     </svg>
   );
 
-  // SVG for the Log In icon
   const logInIcon = (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-log-in">
       <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
@@ -34,35 +34,50 @@ const MultiplayerLanding = () => {
     </svg>
   );
 
-  // Host: Generate quiz and create room
   const handleCreateRoom = async (e) => {
     e.preventDefault();
-    if (!file) {
+
+    if (mode === 'pdf' && !file) {
       setError('Please upload a PDF file');
       return;
     }
+    if (mode === 'prompt' && !promptText.trim()) {
+      setError('Please enter a prompt');
+      return;
+    }
+
     setLoading(true);
     setError('');
-    const formData = new FormData();
-    formData.append('pdf', file);
-    formData.append('level', level);
-    formData.append('numQuestions', numQuestions);
+
     try {
       const BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
       await axios.get(`${BASE_URL}/api/health`);
-      const response = await axios.post(`${BASE_URL}/api/generate-quiz`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
 
-      const quizData = response.data;
-      // Emit create-room with quizData
+      let quizData;
+
+      if (mode === 'pdf') {
+        const formData = new FormData();
+        formData.append('pdf', file);
+        formData.append('level', level);
+        formData.append('numQuestions', numQuestions);
+
+        const response = await axios.post(`${BASE_URL}/api/generate-quiz`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        quizData = response.data;
+      } else {
+        const response = await axios.post(`${BASE_URL}/api/generate-quiz-from-prompt`, {
+          promptText,
+          level,
+          numQuestions,
+        });
+        quizData = response.data;
+      }
+
       socket.emit('create-room', { quizData });
       socket.once('room-created', ({ roomId }) => {
         setRoomCode(roomId);
         setShowShare(true);
-        // Don't navigate yet; let user copy/share code first
-        // navigate(`/room/${roomId}`, { state: { isHost: true, quizData } });
-        // Save quizData for navigation
         window._mpQuizData = quizData;
       });
     } catch (err) {
@@ -72,9 +87,7 @@ const MultiplayerLanding = () => {
     }
   };
 
-  // After sharing, go to waiting room
   const handleGoToRoom = () => {
-    // Added a check to ensure roomCode and quizData are valid before navigating
     if (roomCode && window._mpQuizData) {
       navigate(`/room/${roomCode}`, { state: { isHost: true, quizData: window._mpQuizData } });
     } else {
@@ -82,56 +95,39 @@ const MultiplayerLanding = () => {
     }
   };
 
-  // Join as participant
-const handleJoinRoom = (e) => {
-  e.preventDefault();
-  const roomId = joinCode.trim();
-  const userName = username.trim();
+  const handleJoinRoom = (e) => {
+    e.preventDefault();
+    const roomId = joinCode.trim();
+    const userName = username.trim();
 
-  // ✅ Guard: prevent empty input or multiple submits
-  if (!joinCode.trim() || !username.trim()) return;
-  if (loading) return;
+    if (!joinCode.trim() || !username.trim()) return;
+    if (loading) return;
 
-  setLoading(true);
+    setLoading(true);
 
-  const timeoutId = setTimeout(() => {
-    setLoading(false);
-    setError('Failed to join room. Please try again.');
-  }, 5000);
+    const timeoutId = setTimeout(() => {
+      setLoading(false);
+      setError('Failed to join room. Please try again.');
+    }, 5000);
 
-  socket.emit('join-room', {
-    roomId: joinCode.trim(),
-    username: username.trim()
-  });
-  navigate(`/room/${roomId}`, { state: { username: userName } });
-  // console.log('Emitting join-room with:', {
-  //   roomId: joinCode.trim(),
-  //   username: username.trim()
-  // });
+    socket.emit('join-room', { roomId, username: userName });
+    navigate(`/room/${roomId}`, { state: { username: userName } });
 
-  socket.off('user-joined');
-  socket.off('error');
+    socket.off('user-joined');
+    socket.off('error');
 
-  // socket.on('user-joined', ({ roomId }) => {
-  //   clearTimeout(timeoutId);
-  //   setLoading(false);
-  //   navigate(`/room/${roomId}`, { state: { username } });
-  // });
+    socket.on('error', (errorMessage) => {
+      clearTimeout(timeoutId);
+      setLoading(false);
+      setError(errorMessage);
+    });
+  };
 
-  socket.on('error', (errorMessage) => {
-    clearTimeout(timeoutId);
-    setLoading(false);
-    setError(errorMessage);
-  });
-};
-
-
-  // Copy helpers
   const copyTextToClipboard = (text) => {
     try {
       const textarea = document.createElement('textarea');
       textarea.value = text;
-      textarea.style.position = 'fixed'; // Prevents scrolling to bottom of page in MS Edge.
+      textarea.style.position = 'fixed';
       document.body.appendChild(textarea);
       textarea.focus();
       textarea.select();
@@ -146,20 +142,16 @@ const handleJoinRoom = (e) => {
 
   const handleCopyCode = () => {
     if (copyTextToClipboard(roomCode)) {
-      // Add success feedback if needed
     } else {
-      // Add error feedback if needed
-      alert('Failed to copy code. Please copy manually.'); // Using alert for temporary debug, will replace with a modal in a full app
+      alert('Failed to copy code. Please copy manually.');
     }
   };
 
   const handleCopyLink = () => {
     const link = `${window.location.origin}/room/${roomCode}`;
     if (copyTextToClipboard(link)) {
-      // Add success feedback if needed
     } else {
-      // Add error feedback if needed
-      alert('Failed to copy link. Please copy manually.'); // Using alert for temporary debug, will replace with a modal in a full app
+      alert('Failed to copy link. Please copy manually.');
     }
   };
 
@@ -196,27 +188,96 @@ const handleJoinRoom = (e) => {
             </button>
           </div>
         )}
+
+        {/* Create Quiz Room */}
         {step === 'create' && !showShare && (
           <form onSubmit={handleCreateRoom} className="space-y-6 mt-6">
             <h2 className="text-2xl font-bold text-gray-200">Create Quiz Room</h2>
-            <label className="block w-full">
-              <span className="sr-only">Choose a PDF file</span>
-              <input type="file" accept="application/pdf" onChange={e => setFile(e.target.files[0])} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-gray-700 file:text-white hover:file:bg-gray-600" />
-            </label>
+
+            {/* Toggle Buttons */}
+            <div className="flex justify-center space-x-4">
+              <button
+                type="button"
+                className={`px-6 py-2 rounded-full font-semibold shadow-md ${
+                  mode === 'pdf' ? 'bg-[#00a9a5] text-white' : 'bg-gray-700 text-gray-300'
+                }`}
+                onClick={() => setMode('pdf')}
+              >
+                Upload PDF
+              </button>
+              <button
+                type="button"
+                className={`px-6 py-2 rounded-full font-semibold shadow-md ${
+                  mode === 'prompt' ? 'bg-[#00a9a5] text-white' : 'bg-gray-700 text-gray-300'
+                }`}
+                onClick={() => setMode('prompt')}
+              >
+                Enter Prompt
+              </button>
+            </div>
+
+            {/* Conditional Input */}
+            {mode === 'pdf' ? (
+              <label className="block w-full">
+                <span className="sr-only">Choose a PDF file</span>
+                <input
+                  type="file"
+                  accept="application/pdf"
+                  onChange={(e) => setFile(e.target.files[0])}
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-gray-700 file:text-white hover:file:bg-gray-600"
+                />
+              </label>
+            ) : (
+              <textarea
+                placeholder="Type your quiz topic or text here..."
+                value={promptText}
+                onChange={(e) => setPromptText(e.target.value)}
+                rows={5}
+                required
+                className="w-full bg-gray-700 text-white rounded-xl py-3 px-6 placeholder-gray-400 focus:ring-2 focus:ring-[#00a9a5]"
+              />
+            )}
+
             <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4 items-center">
-              <select value={level} onChange={e => setLevel(e.target.value)} className="w-full bg-gray-700 text-white rounded-full py-3 px-6 border-none focus:ring-2 focus:ring-[#00a9a5]">
+              <select
+                value={level}
+                onChange={(e) => setLevel(e.target.value)}
+                className="w-full bg-gray-700 text-white rounded-full py-3 px-6 border-none focus:ring-2 focus:ring-[#00a9a5]"
+              >
                 <option value="easy">Easy</option>
                 <option value="medium">Medium</option>
                 <option value="hard">Hard</option>
               </select>
-              <input type="number" min={1} max={20} value={numQuestions} onChange={e => setNumQuestions(e.target.value)} className="w-full bg-gray-700 text-white rounded-full py-3 px-6 border-none focus:ring-2 focus:ring-[#00a9a5]" />
+              <input
+                type="number"
+                min={1}
+                max={20}
+                value={numQuestions}
+                onChange={(e) => setNumQuestions(e.target.value)}
+                className="w-full bg-gray-700 text-white rounded-full py-3 px-6 border-none focus:ring-2 focus:ring-[#00a9a5]"
+              />
             </div>
+
             <div className="flex space-x-4">
-              <button type="submit" className="flex-1 btn bg-[#00a9a5] text-white font-bold py-3 px-8 rounded-full shadow-lg hover:bg-[#007a77] transition-colors duration-300" disabled={loading}>{loading ? 'Creating...' : 'Create Quiz Room'}</button>
-              <button type="button" className="flex-1 btn bg-gray-700 text-gray-300 font-bold py-3 px-8 rounded-full shadow-lg hover:bg-gray-600 transition-colors duration-300" onClick={() => setStep(null)}>Back</button>
+              <button
+                type="submit"
+                className="flex-1 btn bg-[#00a9a5] text-white font-bold py-3 px-8 rounded-full shadow-lg hover:bg-[#007a77] transition-colors duration-300"
+                disabled={loading}
+              >
+                {loading ? 'Creating...' : 'Create Quiz Room'}
+              </button>
+              <button
+                type="button"
+                className="flex-1 btn bg-gray-700 text-gray-300 font-bold py-3 px-8 rounded-full shadow-lg hover:bg-gray-600 transition-colors duration-300"
+                onClick={() => setStep(null)}
+              >
+                Back
+              </button>
             </div>
           </form>
         )}
+
+        {/* After Room Creation */}
         {step === 'create' && showShare && (
           <div className="mt-6 flex flex-col items-center text-center space-y-4">
             <h2 className="text-2xl font-bold text-gray-200">Room Created!</h2>
@@ -233,6 +294,8 @@ const handleJoinRoom = (e) => {
             <button onClick={handleGoToRoom} className="btn w-full bg-[#00a9a5] text-white font-bold py-3 px-8 rounded-full shadow-lg hover:bg-[#007a77] transition-colors duration-300">Go to Waiting Room</button>
           </div>
         )}
+
+        {/* Join Room */}
         {step === 'join' && (
           <form onSubmit={handleJoinRoom} className="space-y-6 mt-6">
             <h2 className="text-2xl font-bold text-gray-200">Join Quiz Room</h2>
